@@ -5,6 +5,11 @@ on:
       crName:
         required: true
         type: string
+      codeQlScan:
+        required: false
+        type: boolean
+        default: true
+      
     secrets:
       DOCKERHUB_USERNAME:
         required: true
@@ -34,10 +39,12 @@ jobs:
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
+      if: ${{ inputs.codeQlScan }} == true
       with:
         languages: go
 
     - name: Perform CodeQL Analysis
+      if: ${{ inputs.codeQlScan }} == true
       uses: github/codeql-action/analyze@v2
 
     #https://github.com/docker/login-action
@@ -109,7 +116,7 @@ jobs:
       if: always()
       with:
         sarif_file: ${{ steps.scan.outputs.sarifReport }}
-#
-#    - name: Push
-#      if: ${{ github.event_name != 'schedule' }}
-#      run: docker push ${{ inputs.crName }}/${{ env.TAG }}
+
+    - name: Push
+      if: ${{ github.event_name != 'schedule' }}
+      run: docker push ${{ inputs.crName }}/${{ env.TAG }}
