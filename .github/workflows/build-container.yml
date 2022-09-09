@@ -39,12 +39,12 @@ jobs:
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
-      if: ${{ inputs.codeQlScan }} == true
+      if: ${{ inputs.codeQlScan == true }}
       with:
         languages: go
 
     - name: Perform CodeQL Analysis
-      if: ${{ inputs.codeQlScan }} == true
+      if: ${{ inputs.codeQlScan == true }}
       uses: github/codeql-action/analyze@v2
 
     #https://github.com/docker/login-action
