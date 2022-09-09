@@ -1,0 +1,140 @@
+name: plan
+
+on: 
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      pathToPlan:
+        required: true
+        type: string
+#      tfRoot:
+#        required: true
+#        type: string
+    secrets:
+      GOOGLE_CREDENTIALS:
+        required: true
+#      INFRACOST_API_KEY:
+#        required: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+#    env:
+#      INFRACOST_ENABLE_CLOUD: true
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check -recursive -no-color
+        continue-on-error: true
+
+      - name: Terraform init
+        id: init
+        run: terraform -chdir=${{ inputs.pathToPlan }} init -no-color
+        env:
+            GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Terraform validate
+        id: validate
+        run: terraform -chdir=${{ inputs.pathToPlan }} validate -no-color
+        env:
+            GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Terraform plan
+        id: plan
+        run: terraform -chdir=${{ inputs.pathToPlan }} plan -no-color
+        continue-on-error: true
+        env:
+            GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+##################INFRACOST CONFIGURATIONS##################
+
+#      - name: Setup Infracost
+#        if: github.event_name == 'pull_request'
+#        uses: infracost/actions/setup@v2
+#        with:
+#          api-key: ${{ secrets.INFRACOST_API_KEY }}
+#
+#      - name: Checkout base branch
+#        if: github.event_name == 'pull_request'
+#        uses: actions/checkout@v2
+#        with:
+#          ref: '${{ github.event.pull_request.base.ref }}'
+#
+#      - name: Generate Infracost cost estimate baseline
+#        if: github.event_name == 'pull_request'
+#        run: |
+#          infracost breakdown --path=${{ inputs.tfRoot }} \
+#                              --format=json \
+#                              --out-file=/tmp/infracost-base.json
+#
+#      - name: Checkout PR branch
+#        if: github.event_name == 'pull_request'
+#        uses: actions/checkout@v2
+#
+#      - name: Generate Infracost diff
+#        if: github.event_name == 'pull_request'
+#        run: |
+#          infracost diff --path=${{ inputs.tfRoot }} \
+#                          --format=json \
+#                          --compare-to=/tmp/infracost-base.json \
+#                          --out-file=/tmp/infracost.json
+#
+#      - name: Post Infracost comment
+#        if: github.event_name == 'pull_request'
+#        run: |
+#            infracost comment github --path=/tmp/infracost.json \
+#                                     --repo=$GITHUB_REPOSITORY \
+#                                     --github-token=${{github.token}} \
+#                                     --pull-request=${{github.event.pull_request.number}} \
+#                                     --behavior=update
+
+##################UPDATE PULL REQUEST CONFIGURATIONS##################
+#      - name: Update pull request
+#        if: github.event_name == 'pull_request'
+#        uses: actions/github-script@0.9.0
+#        env:
+#          FMT: "${{ steps.fmt.outputs.stdout }}"
+#          PLAN: "${{ steps.plan.outputs.stdout }}"
+#        with:
+#          github-token: ${{ secrets.GITHUB_TOKEN }}
+#          script: |
+#            const output = `
+#              #### ${{ inputs.environment }} results:
+#
+#              <details><summary>Terraform Fmt: <code>${{ steps.fmt.outcome }}</code></summary><br>
+#
+#              \`\`\`\n
+#              ${process.env.FMT}
+#              \`\`\`
+#
+#              </details>
+#
+#              <details><summary>Terraform Plan: <code>${{ steps.plan.outcome }}</code></summary><br>
+#
+#              \`\`\`\n
+#              ${process.env.PLAN}
+#              \`\`\`
+#
+#              </details>
+#            `;
+#            github.issues.createComment({
+#              issue_number: context.issue.number,
+#              owner: context.repo.owner,
+#              repo: context.repo.repo,
+#              body: output
+#            })
+#      - name: Terraform fmt status
+#        if: steps.fmt.outcome == 'failure'
+#        run: |
+#          echo "${{ steps.fmt.outputs.stdout }}" && exit 1
+#
+#      - name: Terraform plan status
+#        if: steps.plan.outcome == 'failure'
+#        run: |
+#          echo "${{ steps.plan.outputs.stdout }}" && exit 1

@@ -1,0 +1,36 @@
+name: destroy
+
+on: 
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      pathToDestroy:
+        required: true
+        type: string
+    secrets:
+      GOOGLE_CREDENTIALS:
+        required: true
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: (github.event_name != 'repository_dispatch')
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform init
+        id: init
+        run: terraform -chdir=${{ inputs.pathToDestroy }} init -no-color
+        env:
+            GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+      - name: Terraform destroy
+        id: destroy
+        run: terraform -chdir=${{ inputs.pathToDestroy }} destroy -no-color --auto-approve
+        env:
+            GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
