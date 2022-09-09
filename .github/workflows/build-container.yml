@@ -64,13 +64,13 @@ jobs:
       uses: github/codeql-action/analyze@v2
 
     #https://github.com/docker/login-action
-    - name: Login to Docker Hub
+    - name: Login to DockerHub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Calculate tag
+    - name: Calculate container tag
       run: |
         branchName="$(git rev-parse --abbrev-ref HEAD)"
         commitId="$(git rev-parse --short HEAD)"
@@ -85,7 +85,7 @@ jobs:
         tag="$repoName:$prefix-$(date '+%Y%m%d')-$commitId"
         echo "TAG=$(echo $tag)" >> $GITHUB_ENV
 
-    - name: Build
+    - name: Build container
       run: docker build container/expetra/ -t ${{ inputs.crName }}/${{ env.TAG}}
 
     - name: Run Trivy vulnerability scanner
@@ -98,7 +98,7 @@ jobs:
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
 
-    - name: Upload Trivy scan results to GitHub Security tab
+    - name: Upload trivy scan result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
       if: ${{ inputs.trivyScan == true }}
       with:
@@ -114,7 +114,7 @@ jobs:
         image: ${{ inputs.crName }}/${{ env.TAG}}
         args: --file=container/expetra/Dockerfile
 
-    - name: Upload result to GitHub Code Scanning
+    - name: Upload snyk scan result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
       if: ${{ inputs.snykScan == true }}
       with:
@@ -133,11 +133,12 @@ jobs:
         ignore-failed-scan: true
         run-as-user: root
 
-    - uses: github/codeql-action/upload-sarif@v2
+    - name: Upload sysdig scan result to GitHub Code Scanning
+      uses: github/codeql-action/upload-sarif@v2
       if: ${{ inputs.sysdigScan == true }}
       with:
         sarif_file: ${{ steps.scan.outputs.sarifReport }}
 
-    - name: Push
+    - name: Push container
       if: ${{ github.event_name != 'schedule' }}
       run: docker push ${{ inputs.crName }}/${{ env.TAG }}
