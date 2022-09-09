@@ -9,6 +9,22 @@ on:
         required: false
         type: boolean
         default: true
+      trivyScan:
+        required: false
+        type: boolean
+        default: true
+      snykScan:
+        required: false
+        type: boolean
+        default: true
+      sysdigScan:
+        required: false
+        type: boolean
+        default: true
+      sonarScan:
+        required: false
+        type: boolean
+        default: true
       
     secrets:
       DOCKERHUB_USERNAME:
@@ -74,6 +90,7 @@ jobs:
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@d63413b0a4a4482237085319f7f4a1ce99a8f2ac
+      if: ${{ inputs.trivyScan == true }}
       with:
         image-ref: '${{ inputs.crName }}/${{ env.TAG}}'
         format: 'template'
@@ -83,12 +100,14 @@ jobs:
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
+      if: ${{ inputs.trivyScan == true }}
       with:
         sarif_file: 'trivy-results.sarif'
 
     - name: Run Snyk to check Docker image for vulnerabilities
       continue-on-error: true
       uses: snyk/actions/docker@e0bb9436303033a6ecc7f3d3af5e842c269a969d
+      if: ${{ inputs.snykScan == true }}
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
@@ -97,12 +116,14 @@ jobs:
 
     - name: Upload result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
+      if: ${{ inputs.snykScan == true }}
       with:
         sarif_file: snyk.sarif
 
     - name: Sysdig Secure Inline Scan
       id: scan
       uses: sysdiglabs/scan-action@0e483c3a8ed88a6d7394a1baaf0e432db09f240f
+      if: ${{ inputs.sysdigScan == true }}
       with:
         image-tag: ${{ inputs.crName }}/${{ env.TAG}}
         sysdig-secure-token: ${{ secrets.SYSDIG_SECURE_TOKEN}}
@@ -113,7 +134,7 @@ jobs:
         run-as-user: root
 
     - uses: github/codeql-action/upload-sarif@v2
-      if: always()
+      if: ${{ inputs.sysdigScan == true }}
       with:
         sarif_file: ${{ steps.scan.outputs.sarifReport }}
 
