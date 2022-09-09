@@ -1,4 +1,4 @@
-name: "Code Vulnerability Scan"
+name: "GKE Login and helm setup"
 description: "GKE Login and helm setup"
 inputs:
   googleCredentials:
