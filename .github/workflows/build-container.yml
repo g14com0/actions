@@ -25,6 +25,12 @@ on:
         required: false
         type: boolean
         default: true
+      dockerfilePath:
+        required: true
+        type: string
+      appName:
+        required: true
+        type: string
       
     secrets:
       DOCKERHUB_USERNAME:
@@ -82,11 +88,11 @@ jobs:
           prefix=F-$(echo $branchName | cut -f 2 -d/)
         fi
 
-        tag="$repoName:$prefix-$(date '+%Y%m%d')-$commitId"
+        tag="${{ inputs.appName }}:$prefix-$(date '+%Y%m%d')-$commitId"
         echo "TAG=$(echo $tag)" >> $GITHUB_ENV
 
     - name: Build container
-      run: docker build container/expetra/ -t ${{ inputs.crName }}/${{ env.TAG}}
+      run: docker build ${{ inputs.dockerfilePath }} -t ${{ inputs.crName }}/${{ env.TAG}}
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@d63413b0a4a4482237085319f7f4a1ce99a8f2ac
@@ -112,7 +118,7 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: ${{ inputs.crName }}/${{ env.TAG}}
-        args: --file=container/expetra/Dockerfile
+        args: --file=${{ inputs.dockerfilePath }}/Dockerfile
 
     - name: Upload snyk scan result to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2
@@ -128,7 +134,7 @@ jobs:
         image-tag: ${{ inputs.crName }}/${{ env.TAG}}
         sysdig-secure-token: ${{ secrets.SYSDIG_SECURE_TOKEN}}
         sysdig-secure-url: https://eu1.app.sysdig.com 
-        dockerfile-path: container/expetra/Dockerfile
+        dockerfile-path: ${{ inputs.dockerfilePath }}/Dockerfile
         input-type: docker-daemon
         ignore-failed-scan: true
         run-as-user: root
